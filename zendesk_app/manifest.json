@@ -1,0 +1,27 @@
+{
+  "name": "SurveySparrow Survey Link",
+  "author": {
+    "name": "Impiricus",
+    "email": "tyler.carty@impiricus.com"
+  },
+  "defaultLocale": "en",
+  "private": true,
+  "location": {
+    "support": {
+      "ticket_sidebar": {
+        "url": "assets/iframe.html",
+        "flexible": true
+      }
+    }
+  },
+  "version": "1.0.0",
+  "frameworkVersion": "2.0",
+  "parameters": [
+    {
+      "name": "surveyBaseUrl",
+      "type": "text",
+      "required": true,
+      "default": "https://impiricusclientservices.surveysparrow.com/n/Concierge-Satifaction/ntt-qgyGc"
+    }
+  ]
+}

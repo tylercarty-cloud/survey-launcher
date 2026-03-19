@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/combine/npm/@zendeskgarden/css-bedrock@7.0.21,npm/@zendeskgarden/css-utilities@4.3.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+      font-size: 13px;
+      padding: 10px;
+      margin: 0;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .header {
+      font-weight: 600;
+      font-size: 14px;
+      color: #2f3941;
+      margin-bottom: 4px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #e9ebed;
+    }
+    .info-label {
+      color: #68737d;
+      font-size: 12px;
+    }
+    .info-value {
+      color: #2f3941;
+      font-size: 12px;
+      font-weight: 500;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .survey-link {
+      background: #f8f9f9;
+      border: 1px solid #d8dcde;
+      border-radius: 4px;
+      padding: 10px;
+      word-break: break-all;
+      font-size: 11px;
+      color: #49545c;
+      margin: 8px 0;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      width: 100%;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #1f73b7;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #144a75;
+    }
+    .btn-secondary {
+      background: white;
+      color: #1f73b7;
+      border: 1px solid #1f73b7;
+    }
+    .btn-secondary:hover {
+      background: #e9f2f9;
+    }
+    .btn:disabled {
+      background: #d8dcde;
+      color: #87929d;
+      cursor: not-allowed;
+    }
+    .status {
+      text-align: center;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .status-success {
+      background: #edf8f4;
+      color: #186146;
+    }
+    .status-error {
+      background: #fff0f1;
+      color: #cc3340;
+    }
+    .loading {
+      text-align: center;
+      color: #68737d;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">SurveySparrow Survey Link</div>
+    
+    <div id="loading" class="loading">Loading ticket data...</div>
+    
+    <div id="content" style="display: none;">
+      <div class="info-row">
+        <span class="info-label">Phone:</span>
+        <span class="info-value" id="phone">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">External ID:</span>
+        <span class="info-value" id="externalId">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Ticket ID:</span>
+        <span class="info-value" id="ticketId">-</span>
+      </div>
+      
+      <div class="survey-link" id="surveyLink">-</div>
+      
+      <button class="btn btn-primary" id="insertBtn">
+        Insert into Reply
+      </button>
+      
+      <button class="btn btn-secondary" id="copyBtn">
+        Copy to Clipboard
+      </button>
+      
+      <div id="status" class="status" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

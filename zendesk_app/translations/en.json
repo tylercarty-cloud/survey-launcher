@@ -1,0 +1,14 @@
+{
+  "app": {
+    "name": "SurveySparrow Survey Link",
+    "short_description": "Generate personalized SurveySparrow survey links for customers",
+    "long_description": "This app allows agents to generate personalized SurveySparrow survey links that include customer phone number and external ID for response tracking. Agents can insert the link directly into their reply or copy it to clipboard.",
+    "installation_instructions": "1. Install the app\n2. Configure the Survey Base URL in app settings\n3. Open any ticket to see the survey link generator in the sidebar"
+  },
+  "parameters": {
+    "surveyBaseUrl": {
+      "label": "Survey Base URL",
+      "helpText": "The base URL for your SurveySparrow survey (e.g., https://yourcompany.surveysparrow.com/s/survey-name)"
+    }
+  }
+}

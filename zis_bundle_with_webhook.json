@@ -1,0 +1,313 @@
+{
+  "zis_template_version": "2019-10-14",
+  "name": "SurveySparrow Integration Bundle with Webhook",
+  "description": "Generate SurveySparrow survey links via ticket events or on-demand webhook trigger",
+  "resources": {
+    "GetTicketDetails": {
+      "type": "ZIS::Action::Http",
+      "properties": {
+        "name": "GetTicketDetails",
+        "definition": {
+          "method": "GET",
+          "path.$": "/api/v2/tickets/{{$.ticket_id}}.json?include=users",
+          "connectionName": "zendesk"
+        }
+      }
+    },
+
+    "GetRequesterDetails": {
+      "type": "ZIS::Action::Http",
+      "properties": {
+        "name": "GetRequesterDetails",
+        "definition": {
+          "method": "GET",
+          "path.$": "/api/v2/users/{{$.requester_id}}.json",
+          "connectionName": "zendesk"
+        }
+      }
+    },
+
+    "AddSurveyLinkToTicket": {
+      "type": "ZIS::Action::Http",
+      "properties": {
+        "name": "AddSurveyLinkToTicket",
+        "definition": {
+          "method": "PUT",
+          "path.$": "/api/v2/tickets/{{$.ticket_id}}.json",
+          "connectionName": "zendesk",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "requestBody": {
+            "ticket": {
+              "comment": {
+                "body.$": "$.comment_body",
+                "public": false
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "CreateSurveySparrowUniqueLink": {
+      "type": "ZIS::Action::Http",
+      "properties": {
+        "name": "CreateSurveySparrowUniqueLink",
+        "definition": {
+          "method": "POST",
+          "url": "https://api.surveysparrow.com/v3/channels/create_unique_links",
+          "connectionName": "surveysparrow",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Accept",
+              "value": "application/json"
+            }
+          ],
+          "requestBody": {
+            "survey_id.$": "$.survey_id",
+            "channel_id.$": "$.channel_id",
+            "contacts": [
+              {
+                "phone.$": "$.phone",
+                "email.$": "$.email",
+                "full_name.$": "$.full_name",
+                "variables": {
+                  "external_id.$": "$.external_id",
+                  "ticket_id.$": "$.ticket_id"
+                }
+              }
+            ],
+            "short_url": true
+          }
+        }
+      }
+    },
+
+    "GenerateSurveyLinkFlow": {
+      "type": "ZIS::Flow",
+      "properties": {
+        "name": "GenerateSurveyLinkFlow",
+        "definition": {
+          "StartAt": "CheckTicketStatus",
+          "States": {
+            "CheckTicketStatus": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.input.ticket_event.ticket.status",
+                  "StringEquals": "solved",
+                  "Next": "GetRequester"
+                }
+              ],
+              "Default": "SkipNotSolved"
+            },
+
+            "SkipNotSolved": {
+              "Type": "Succeed",
+              "Message": "Ticket not solved, skipping survey link generation"
+            },
+
+            "GetRequester": {
+              "Type": "Action",
+              "ActionName": "zis:surveysparrow_integration:action:GetRequesterDetails",
+              "Parameters": {
+                "requester_id.$": "$.input.ticket_event.ticket.requester_id"
+              },
+              "ResultPath": "$.requester_result",
+              "Next": "BuildSurveyLink"
+            },
+
+            "BuildSurveyLink": {
+              "Type": "Action",
+              "ActionName": "zis:common:transform:Jq",
+              "Parameters": {
+                "expr": ".survey_base_url + \"?phone=\" + (.phone // \"\") + \"&external_id=\" + (.external_id // \"\") + \"&ticket_id=\" + (.ticket_id | tostring)",
+                "data": {
+                  "survey_base_url.$": "$.config.survey_base_url",
+                  "phone.$": "$.requester_result.user.phone",
+                  "external_id.$": "$.requester_result.user.external_id",
+                  "ticket_id.$": "$.input.ticket_event.ticket.id"
+                }
+              },
+              "ResultPath": "$.survey_link_array",
+              "Next": "ExtractSurveyLink"
+            },
+
+            "ExtractSurveyLink": {
+              "Type": "Action",
+              "ActionName": "zis:common:transform:Jq",
+              "Parameters": {
+                "expr": ".[0]",
+                "data.$": "$.survey_link_array"
+              },
+              "ResultPath": "$.survey_link",
+              "Next": "BuildCommentBody"
+            },
+
+            "BuildCommentBody": {
+              "Type": "Action",
+              "ActionName": "zis:common:transform:Jq",
+              "Parameters": {
+                "expr": "\"📋 **Survey Link Ready**\\n\\nPlease send the following survey link to the customer:\\n\\n\" + . + \"\\n\\n---\\n*This link is personalized for this customer and includes their contact information for response tracking.*\"",
+                "data.$": "$.survey_link"
+              },
+              "ResultPath": "$.comment_body_array",
+              "Next": "ExtractCommentBody"
+            },
+
+            "ExtractCommentBody": {
+              "Type": "Action",
+              "ActionName": "zis:common:transform:Jq",
+              "Parameters": {
+                "expr": ".[0]",
+                "data.$": "$.comment_body_array"
+              },
+              "ResultPath": "$.final_comment_body",
+              "Next": "AddNoteToTicket"
+            },
+
+            "AddNoteToTicket": {
+              "Type": "Action",
+              "ActionName": "zis:surveysparrow_integration:action:AddSurveyLinkToTicket",
+              "Parameters": {
+                "ticket_id.$": "$.input.ticket_event.ticket.id",
+                "comment_body.$": "$.final_comment_body"
+              },
+              "ResultPath": "$.update_result",
+              "Next": "Success"
+            },
+
+            "Success": {
+              "Type": "Succeed",
+              "Message": "Survey link successfully added to ticket"
+            }
+          }
+        }
+      }
+    },
+
+    "OnDemandSurveyLinkFlow": {
+      "type": "ZIS::Flow",
+      "properties": {
+        "name": "OnDemandSurveyLinkFlow",
+        "definition": {
+          "StartAt": "FetchTicketDetails",
+          "States": {
+            "FetchTicketDetails": {
+              "Type": "Action",
+              "ActionName": "zis:surveysparrow_integration:action:GetTicketDetails",
+              "Parameters": {
+                "ticket_id.$": "$.input.ticket_id"
+              },
+              "ResultPath": "$.ticket_result",
+              "Next": "GetRequesterForWebhook"
+            },
+
+            "GetRequesterForWebhook": {
+              "Type": "Action",
+              "ActionName": "zis:surveysparrow_integration:action:GetRequesterDetails",
+              "Parameters": {
+                "requester_id.$": "$.ticket_result.ticket.requester_id"
+              },
+              "ResultPath": "$.requester_result",
+              "Next": "BuildSurveyLinkWebhook"
+            },
+
+            "BuildSurveyLinkWebhook": {
+              "Type": "Action",
+              "ActionName": "zis:common:transform:Jq",
+              "Parameters": {
+                "expr": ".survey_base_url + \"?phone=\" + (.phone // \"\") + \"&external_id=\" + (.external_id // \"\") + \"&ticket_id=\" + (.ticket_id | tostring)",
+                "data": {
+                  "survey_base_url.$": "$.config.survey_base_url",
+                  "phone.$": "$.requester_result.user.phone",
+                  "external_id.$": "$.requester_result.user.external_id",
+                  "ticket_id.$": "$.input.ticket_id"
+                }
+              },
+              "ResultPath": "$.survey_link_array",
+              "Next": "ExtractSurveyLinkWebhook"
+            },
+
+            "ExtractSurveyLinkWebhook": {
+              "Type": "Action",
+              "ActionName": "zis:common:transform:Jq",
+              "Parameters": {
+                "expr": ".[0]",
+                "data.$": "$.survey_link_array"
+              },
+              "ResultPath": "$.survey_link",
+              "Next": "BuildCommentBodyWebhook"
+            },
+
+            "BuildCommentBodyWebhook": {
+              "Type": "Action",
+              "ActionName": "zis:common:transform:Jq",
+              "Parameters": {
+                "expr": "\"📋 **Survey Link Ready**\\n\\nPlease send the following survey link to the customer:\\n\\n\" + . + \"\\n\\n---\\n*This link is personalized for this customer and includes their contact information for response tracking.*\"",
+                "data.$": "$.survey_link"
+              },
+              "ResultPath": "$.comment_body_array",
+              "Next": "ExtractCommentBodyWebhook"
+            },
+
+            "ExtractCommentBodyWebhook": {
+              "Type": "Action",
+              "ActionName": "zis:common:transform:Jq",
+              "Parameters": {
+                "expr": ".[0]",
+                "data.$": "$.comment_body_array"
+              },
+              "ResultPath": "$.final_comment_body",
+              "Next": "AddNoteToTicketWebhook"
+            },
+
+            "AddNoteToTicketWebhook": {
+              "Type": "Action",
+              "ActionName": "zis:surveysparrow_integration:action:AddSurveyLinkToTicket",
+              "Parameters": {
+                "ticket_id.$": "$.input.ticket_id",
+                "comment_body.$": "$.final_comment_body"
+              },
+              "ResultPath": "$.update_result",
+              "Next": "SuccessWebhook"
+            },
+
+            "SuccessWebhook": {
+              "Type": "Succeed",
+              "Message": "Survey link successfully added to ticket via webhook"
+            }
+          }
+        }
+      }
+    },
+
+    "GenerateSurveyLinkOnSolved": {
+      "type": "ZIS::JobSpec",
+      "properties": {
+        "name": "GenerateSurveyLinkOnSolved",
+        "event_source": "support",
+        "event_type": "ticket.StatusChanged",
+        "flow_name": "zis:surveysparrow_integration:flow:GenerateSurveyLinkFlow"
+      }
+    },
+
+    "GenerateSurveyLinkOnDemand": {
+      "type": "ZIS::JobSpec",
+      "properties": {
+        "name": "GenerateSurveyLinkOnDemand",
+        "event_source": "survey_trigger",
+        "event_type": "generate_link",
+        "flow_name": "zis:surveysparrow_integration:flow:OnDemandSurveyLinkFlow"
+      }
+    }
+  }
+}

@@ -1,0 +1,2 @@
+# Python dependencies for SurveySparrow-Zendesk Integration
+requests>=2.28.0
