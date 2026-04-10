@@ -12,8 +12,8 @@ from urllib.parse import urlencode
 
 # Configuration - update these values or use environment variables
 SURVEYSPARROW_TOKEN = os.environ.get('SURVEYSPARROW_API_TOKEN', 'your_token_here')
-SURVEY_ID = os.environ.get('SURVEY_ID', '1000461299')
-SURVEY_BASE_URL = os.environ.get('SURVEY_BASE_URL', 'https://yourcompany.surveysparrow.com/s/your-survey')
+SURVEY_ID = os.environ.get('SURVEY_ID', 'ntt-qgyGc')
+SURVEY_BASE_URL = os.environ.get('SURVEY_BASE_URL', f'https://impiricusclientservices.surveysparrow.com/n/Concierge-Satifaction/{SURVEY_ID}')
 
 
 def test_get_survey():
